@@ -8,12 +8,20 @@ using std::cout;
 const int WINDOW_WIDTH = 800;
 const int WINDOW_HEIGHT = 300;
 const float BALL_SPEED_X = 6.0f;
-const float BALL_SPEED_Y = 2.0f;
+const float BALL_SPEED_Y = 3.0f;
 const int BAT_SPEED = 5;
 
 const float batWidth = 1.0f;
 const float batHeight = 3.0f;
 const float FPS = 60;
+
+void resetBallPosition(bool &goRightFirst, Sprite &sBall, Vector2f &velocity) {
+	if (rand() % 2) goRightFirst = true;
+	else goRightFirst = false;
+	sBall.setPosition(goRightFirst ? WINDOW_WIDTH / 3 : WINDOW_WIDTH / 1.5, WINDOW_HEIGHT / 3);
+	velocity.x = goRightFirst ? BALL_SPEED_X : -BALL_SPEED_X;
+	velocity.y = BALL_SPEED_Y;
+}
 
 int main() {
 
@@ -45,11 +53,12 @@ int main() {
 	Sprite sBackground(background), sRestart(restart), sRestarted(restarted);
 
 	bool goRightFirst = true;
-	srand(time(0));
+	/*srand(time(0));
 	if (rand() % 2) goRightFirst = true;
-	else goRightFirst = false;
-
-	sBall.setPosition(goRightFirst ? WINDOW_WIDTH/3 : WINDOW_WIDTH/1.5, WINDOW_HEIGHT/3);
+	else goRightFirst = false;*/
+	Vector2f velocity((goRightFirst ? BALL_SPEED_X : -BALL_SPEED_X), BALL_SPEED_Y);
+	resetBallPosition(goRightFirst, sBall, velocity);
+	//sBall.setPosition(goRightFirst ? WINDOW_WIDTH/3 : WINDOW_WIDTH/1.5, WINDOW_HEIGHT/3);
 	sBall.setScale(0.4,0.4);
 	
 	sBat1.setPosition(0, 80);
@@ -62,7 +71,6 @@ int main() {
 
 	cout << "Window size: " << window.getPosition().x << ' ' << window.getPosition().y << '\n';
 
-	Vector2f velocity((goRightFirst ? BALL_SPEED_X : -BALL_SPEED_X), BALL_SPEED_Y);
 	
 	int player1Score = 0, player2Score = 0, seconds;
 	bool gameOver = false;
@@ -87,11 +95,7 @@ int main() {
 			} else if (gameOver && event.type == Event::MouseButtonPressed) {
 				if (event.key.code == 0) {
 					gameOver = false;
-					if (rand() % 2) goRightFirst = true;
-					else goRightFirst = false;
-					sBall.setPosition(goRightFirst ? WINDOW_WIDTH / 3 : WINDOW_WIDTH / 1.5, WINDOW_HEIGHT/3);
-					velocity.x = goRightFirst ? BALL_SPEED_X : -BALL_SPEED_X;
-					velocity.y = BALL_SPEED_Y;
+					resetBallPosition(goRightFirst, sBall, velocity);
 					gameover.setString("");
 					player1Score = 0; player2Score = 0;
 					score1.setString("Player 1: " + std::to_string(player1Score));
@@ -109,18 +113,21 @@ int main() {
 				sBall.move(velocity);
 
 				if (sBall.getGlobalBounds().intersects(sBat1.getGlobalBounds()) || sBall.getGlobalBounds().intersects(sBat2.getGlobalBounds())) std::cout << "Touched bat";
-				if ((sBall.getPosition().x < (0+batWidth) || sBall.getPosition().x > (window.getSize().x - sBall.getGlobalBounds().width))) {
-					velocity.x = -velocity.x;
-					if ((sBall.getGlobalBounds().intersects(sBat1.getGlobalBounds()))) {
-						player1Score++;
-						score1.setString("Player 1: " + std::to_string(player1Score));
-					} else if (sBall.getGlobalBounds().intersects(sBat2.getGlobalBounds())) {
+				if (sBall.getPosition().x < (0 + batWidth)) {
+					if ((sBall.getGlobalBounds().intersects(sBat1.getGlobalBounds()))) velocity.x = -velocity.x;
+					else {
 						player2Score++;
 						score2.setString("Player 2: " + std::to_string(player2Score));
-					} else {
-						gameOver = true;
+						resetBallPosition(goRightFirst, sBall, velocity);
 					}
-				}
+				} else if (sBall.getPosition().x > (window.getSize().x - sBall.getGlobalBounds().width)) {
+					if (sBall.getGlobalBounds().intersects(sBat2.getGlobalBounds())) velocity.x = -velocity.x;
+					else {
+						player1Score++;
+						score1.setString("Player 1: " + std::to_string(player1Score));
+						resetBallPosition(goRightFirst, sBall, velocity);
+					}
+				} else if (player1Score + player2Score >= 5) gameOver = true;
 				if (sBall.getPosition().y < 0 || sBall.getPosition().y > (window.getSize().y - sBall.getGlobalBounds().height)) {
 					velocity.y = -velocity.y;
 				}
