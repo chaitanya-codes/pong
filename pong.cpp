@@ -4,6 +4,7 @@
 
 using namespace sf;
 using std::cout;
+using std::string;
 
 const int WINDOW_WIDTH = 800;
 const int WINDOW_HEIGHT = 300;
@@ -15,6 +16,8 @@ const float batWidth = 1.0f;
 const float batHeight = 3.0f;
 const float FPS = 60;
 
+Font font;
+
 void resetBallPosition(bool &goRightFirst, Sprite &sBall, Vector2f &velocity) {
 	if (rand() % 2) goRightFirst = true;
 	else goRightFirst = false;
@@ -23,15 +26,51 @@ void resetBallPosition(bool &goRightFirst, Sprite &sBall, Vector2f &velocity) {
 	velocity.y = BALL_SPEED_Y;
 }
 
+class Button {
+	public:
+		Sprite sButton;
+		Text text;
+		Texture button, buttonPressed;
+		
+		Button(Vector2f position, string text_) {
+			text.setString(text_);
+			Vector2f textLocation(position.x + 2, position.y + 2);
+			text.setPosition(textLocation);
+			text.setCharacterSize(30);
+			text.setFillColor(sf::Color::Blue);
+			text.setFont(font);
+			sButton.setPosition(position);
+			sButton.setScale(0.7, 0.5);
+			if (!button.loadFromFile("images/button.png")) std::cerr << "Error loading button.png\n";
+			if (!buttonPressed.loadFromFile("images/buttonPressed.png")) std::cerr << "Error loading buttonPressed.png\n";
+		}
+
+		void display(RenderWindow &window) {
+			sButton.setTexture(button);
+			window.draw(sButton);
+			window.draw(text);
+		}
+
+		void press(RenderWindow &window) {
+			sButton.setTexture(buttonPressed);
+			sButton.move(2, 2);
+			text.move(2, 2);
+			window.draw(sButton);
+			window.draw(text);
+		}
+		FloatRect globalBounds() {
+			return this->sButton.getGlobalBounds();
+		}
+};
+
 int main() {
 
 	RenderWindow window(VideoMode(WINDOW_WIDTH, WINDOW_HEIGHT), "Pong");
 
 	Event event;
-	Text score1,score2,gameover;
-	Font font;
-	font.loadFromFile("C:/Development/Fonts/Poppins/Poppins-Bold.ttf");
+	Text score1, score2, gameover;
 
+	font.loadFromFile("C:/Development/Fonts/Poppins/Poppins-Bold.ttf");
 	score1.setFont(font); score2.setFont(font); gameover.setFont(font);
 	score1.setCharacterSize(20); score2.setCharacterSize(20); gameover.setCharacterSize(20);
 	score1.setString("Player 1: 0"); score2.setString("Player 2: 0"); gameover.setString("");
@@ -41,37 +80,31 @@ int main() {
 	Texture ball;
 	Texture bat1, bat2;
 	Texture background;
-	Texture restart, restarted;
 	ball.loadFromFile("images/ball.png");
 	bat1.loadFromFile("images/bat.png");
 	bat2.loadFromFile("images/bat.png");
 	background.loadFromFile("images/background.png");
-	restart.loadFromFile("images/restart.png");
-	restarted.loadFromFile("images/restarted.png");
+
+	Vector2f restartPos(WINDOW_WIDTH/2 - 70, WINDOW_HEIGHT-50);
+	Button restart(restartPos, "Restart");
+
 	Sprite sBall(ball);
 	Sprite sBat1(bat1), sBat2(bat2);
-	Sprite sBackground(background), sRestart(restart), sRestarted(restarted);
+	Sprite sBackground(background);
 
 	bool goRightFirst = true;
-	/*srand(time(0));
-	if (rand() % 2) goRightFirst = true;
-	else goRightFirst = false;*/
 	Vector2f velocity((goRightFirst ? BALL_SPEED_X : -BALL_SPEED_X), BALL_SPEED_Y);
 	resetBallPosition(goRightFirst, sBall, velocity);
-	//sBall.setPosition(goRightFirst ? WINDOW_WIDTH/3 : WINDOW_WIDTH/1.5, WINDOW_HEIGHT/3);
+
 	sBall.setScale(0.4,0.4);
-	
+
 	sBat1.setPosition(0, 80);
 	sBat1.setScale(batWidth, batHeight);
 	sBat2.setPosition(WINDOW_WIDTH-5, 80);
 	sBat2.setScale(batWidth, batHeight);
 
-	sRestart.setPosition(WINDOW_WIDTH / 2 - 60, 160);
-	sRestarted.setPosition(WINDOW_WIDTH / 2 - 60, 170);
-
 	cout << "Window size: " << window.getPosition().x << ' ' << window.getPosition().y << '\n';
 
-	
 	int player1Score = 0, player2Score = 0, seconds;
 	bool gameOver = false;
 	Clock clock;
@@ -93,17 +126,23 @@ int main() {
 					sBat2.move(0, BAT_SPEED);
 				}
 			} else if (gameOver && event.type == Event::MouseButtonPressed) {
+				Vector2f mousePos = Vector2f(Mouse::getPosition(window));
 				if (event.key.code == 0) {
-					gameOver = false;
-					resetBallPosition(goRightFirst, sBall, velocity);
-					gameover.setString("");
-					player1Score = 0; player2Score = 0;
-					score1.setString("Player 1: " + std::to_string(player1Score));
-					score2.setString("Player 2: " + std::to_string(player2Score));
-					window.draw(sRestarted);
+					if (restart.globalBounds().contains(mousePos)) {
+						gameOver = false;
+						resetBallPosition(goRightFirst, sBall, velocity);
+						gameover.setString("");
+						player1Score = 0; player2Score = 0;
+						score1.setString("Player 1: " + std::to_string(player1Score));
+						score2.setString("Player 2: " + std::to_string(player2Score));
+						restart.press(window);
+					}
 				}
 			}
 		}
+
+		window.clear(Color::White);
+		window.draw(sBackground);
 
 		if (!gameOver) {
 			seconds = clock.getElapsedTime().asMilliseconds();
@@ -140,17 +179,16 @@ int main() {
 			if (player1Score > player2Score) won = "Player 1 won!\n";
 			else if (player1Score < player2Score) won = "Player 2 won!\n";
 			else won = "It's a draw!\n";
-			gameover.setString("Game Over!\n" + won + "\nClick to restart!");
+			gameover.setString("Game Over!\n" + won + '\n');
 			window.draw(gameover);
-			window.draw(sRestart);
+			restart.display(window);
 		}
 
-		window.clear(Color::White);
-		window.draw(sBackground);
 		window.draw(sBall);
 		window.draw(sBat1); window.draw(sBat2);
 		window.draw(score1); window.draw(score2);
 		window.draw(gameover);
+
 		window.display();
 	}
 	 
