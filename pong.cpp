@@ -32,7 +32,7 @@ class Button {
 		Text text;
 		Texture button, buttonPressed;
 		
-		Button(Vector2f position, string text_) {
+		Button(Vector2f position, string text_, bool scaleWide = false) {
 			text.setString(text_);
 			Vector2f textLocation(position.x + 2, position.y + 2);
 			text.setPosition(textLocation);
@@ -41,6 +41,7 @@ class Button {
 			text.setFont(font);
 			sButton.setPosition(position);
 			sButton.setScale(0.7, 0.5);
+			if (scaleWide) sButton.scale(1.2,1);
 			if (!button.loadFromFile("images/button.png")) std::cerr << "Error loading button.png\n";
 			if (!buttonPressed.loadFromFile("images/buttonPressed.png")) std::cerr << "Error loading buttonPressed.png\n";
 		}
@@ -87,6 +88,8 @@ int main() {
 
 	Vector2f restartPos(WINDOW_WIDTH/2 - 70, WINDOW_HEIGHT-50);
 	Button restart(restartPos, "Restart");
+	Button pvpButton({ WINDOW_WIDTH / 3 - 70, WINDOW_HEIGHT / 2 }, "   Player");
+	Button computerButton({ WINDOW_WIDTH / 3 + 140, WINDOW_HEIGHT / 2 }, "Computer", true);
 
 	Sprite sBall(ball);
 	Sprite sBat1(bat1), sBat2(bat2);
@@ -106,51 +109,69 @@ int main() {
 	cout << "Window size: " << window.getPosition().x << ' ' << window.getPosition().y << '\n';
 
 	int player1Score = 0, player2Score = 0, seconds;
-	bool gameOver = false;
+	bool gameOver = false, gamemodeChosen = false, pvp = true;
 	Clock clock;
 
 	while (window.isOpen()) {
 		while (window.pollEvent(event)) {
 			if (event.type == Event::Closed) window.close();
-			if (event.type == Event::KeyPressed) {
+			if (event.type == Event::KeyPressed && gamemodeChosen) {
 				if (Keyboard::isKeyPressed(Keyboard::W) && sBat1.getPosition().y > 0) {
 					sBat1.move(0, -BAT_SPEED);
 				}
 				if (Keyboard::isKeyPressed(Keyboard::S) && sBat1.getPosition().y < WINDOW_HEIGHT - sBat1.getGlobalBounds().height) {
 					sBat1.move(0, BAT_SPEED);
 				}
-				if (Keyboard::isKeyPressed(Keyboard::Up) && sBat2.getPosition().y > 0) {
+				if (Keyboard::isKeyPressed(Keyboard::Up) && sBat2.getPosition().y > 0 && pvp) {
 					sBat2.move(0, -BAT_SPEED);
 				}
-				if (Keyboard::isKeyPressed(Keyboard::Down) && sBat2.getPosition().y < WINDOW_HEIGHT - sBat2.getGlobalBounds().height) {
+				if (Keyboard::isKeyPressed(Keyboard::Down) && sBat2.getPosition().y < WINDOW_HEIGHT - sBat2.getGlobalBounds().height && pvp) {
 					sBat2.move(0, BAT_SPEED);
 				}
-			} else if (gameOver && event.type == Event::MouseButtonPressed) {
+			}
+			else if (event.type == Event::MouseButtonPressed && event.key.code == 0) {
 				Vector2f mousePos = Vector2f(Mouse::getPosition(window));
-				if (event.key.code == 0) {
-					if (restart.globalBounds().contains(mousePos)) {
-						gameOver = false;
-						resetBallPosition(goRightFirst, sBall, velocity);
-						gameover.setString("");
-						player1Score = 0; player2Score = 0;
-						score1.setString("Player 1: " + std::to_string(player1Score));
-						score2.setString("Player 2: " + std::to_string(player2Score));
-						restart.press(window);
+				if (!gamemodeChosen) {
+					if (pvpButton.globalBounds().contains(mousePos)) {
+						pvp = true;
+						pvpButton.press(window);
+						gamemodeChosen = true;
+					} else if (computerButton.globalBounds().contains(mousePos)) {
+						pvp = false;
+						computerButton.press(window);
+						gamemodeChosen = true;
 					}
+				} else if (gameOver && restart.globalBounds().contains(mousePos)) {
+					gameOver = false;
+					resetBallPosition(goRightFirst, sBall, velocity);
+					gameover.setString("");
+					player1Score = 0; player2Score = 0;
+					score1.setString("Player 1: " + std::to_string(player1Score));
+					score2.setString("Player 2: " + std::to_string(player2Score));
+					restart.press(window);
 				}
 			}
 		}
-
+		
+		
 		window.clear(Color::White);
 		window.draw(sBackground);
 
-		if (!gameOver) {
+		if (!gamemodeChosen) {
+			pvpButton.display(window);
+			computerButton.display(window);
+		} else if (!gameOver) {
 			seconds = clock.getElapsedTime().asMilliseconds();
 			if (seconds > FPS / 5) {
 				seconds = 0;
 				clock.restart();
 				sBall.move(velocity);
 
+				// Computer - AI
+				if (!pvp) {
+					if (velocity.y > 0 && sBat2.getPosition().y < WINDOW_HEIGHT - sBat2.getGlobalBounds().height) sBat2.move(0, BAT_SPEED / 2);
+					else if (velocity.y < 0 && sBat2.getPosition().y > 0) sBat2.move(0, -BAT_SPEED / 2);
+				}
 				if (sBall.getGlobalBounds().intersects(sBat1.getGlobalBounds()) || sBall.getGlobalBounds().intersects(sBat2.getGlobalBounds())) std::cout << "Touched bat";
 				if (sBall.getPosition().x < (0 + batWidth)) {
 					if ((sBall.getGlobalBounds().intersects(sBat1.getGlobalBounds()))) velocity.x = -velocity.x;
@@ -171,8 +192,7 @@ int main() {
 					velocity.y = -velocity.y;
 				}
 			}
-		}
-		else {
+		} else {
 			velocity.x = 0;
 			velocity.y = 0;
 			std::string won;
