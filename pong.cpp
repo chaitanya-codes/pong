@@ -8,7 +8,7 @@ using std::string;
 
 const int WINDOW_WIDTH = 800;
 const int WINDOW_HEIGHT = 300;
-const float BALL_SPEED_X = 6.0f;
+const float BALL_SPEED_X = 6.5f;
 const float BALL_SPEED_Y = 3.0f;
 const int BAT_SPEED = 5;
 
@@ -28,9 +28,9 @@ void resetBallPosition(bool &goRightFirst, Sprite &sBall, Vector2f &velocity) {
 
 class Button {
 	public:
-		Sprite sButton;
 		Text text;
 		Texture button, buttonPressed;
+		Sprite sButton;
 		
 		Button(Vector2f position, string text_, bool scaleWide = false) {
 			text.setString(text_);
@@ -153,7 +153,6 @@ int main() {
 			}
 		}
 		
-		
 		window.clear(Color::White);
 		window.draw(sBackground);
 
@@ -167,25 +166,28 @@ int main() {
 				clock.restart();
 				sBall.move(velocity);
 
-				// Computer - AI
+				// Computer
 				if (!pvp) {
 					if (velocity.y > 0 && sBat2.getPosition().y < WINDOW_HEIGHT - sBat2.getGlobalBounds().height) sBat2.move(0, BAT_SPEED / 2);
 					else if (velocity.y < 0 && sBat2.getPosition().y > 0) sBat2.move(0, -BAT_SPEED / 2);
 				}
+
 				if (sBall.getGlobalBounds().intersects(sBat1.getGlobalBounds()) || sBall.getGlobalBounds().intersects(sBat2.getGlobalBounds())) std::cout << "Touched bat";
 				if (sBall.getPosition().x < (0 + batWidth)) {
 					if ((sBall.getGlobalBounds().intersects(sBat1.getGlobalBounds()))) velocity.x = -velocity.x;
-					else {
+					else if (sBall.getPosition().x < 0) {
 						player2Score++;
 						score2.setString("Player 2: " + std::to_string(player2Score));
 						resetBallPosition(goRightFirst, sBall, velocity);
+						Sleep(300);
 					}
 				} else if (sBall.getPosition().x > (window.getSize().x - sBall.getGlobalBounds().width)) {
 					if (sBall.getGlobalBounds().intersects(sBat2.getGlobalBounds())) velocity.x = -velocity.x;
-					else {
+					else if (sBall.getPosition().x > window.getSize().x) {
 						player1Score++;
 						score1.setString("Player 1: " + std::to_string(player1Score));
 						resetBallPosition(goRightFirst, sBall, velocity);
+						Sleep(300);
 					}
 				} else if (player1Score + player2Score >= 5) gameOver = true;
 				if (sBall.getPosition().y < 0 || sBall.getPosition().y > (window.getSize().y - sBall.getGlobalBounds().height)) {
@@ -208,7 +210,7 @@ int main() {
 		window.draw(sBat1); window.draw(sBat2);
 		window.draw(score1); window.draw(score2);
 		window.draw(gameover);
-
+	
 		window.display();
 	}
 	 
