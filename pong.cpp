@@ -175,7 +175,7 @@ int main() {
 				if (sBall.getGlobalBounds().intersects(sBat1.getGlobalBounds()) || sBall.getGlobalBounds().intersects(sBat2.getGlobalBounds())) std::cout << "Touched bat";
 				if (sBall.getPosition().x < (0 + batWidth)) {
 					if ((sBall.getGlobalBounds().intersects(sBat1.getGlobalBounds()))) velocity.x = -velocity.x;
-					else if (sBall.getPosition().x < 0) {
+					else if (sBall.getPosition().x < (-sBall.getGlobalBounds().width)) {
 						player2Score++;
 						score2.setString("Player 2: " + std::to_string(player2Score));
 						resetBallPosition(goRightFirst, sBall, velocity);
@@ -210,7 +210,7 @@ int main() {
 		window.draw(sBat1); window.draw(sBat2);
 		window.draw(score1); window.draw(score2);
 		window.draw(gameover);
-	
+		
 		window.display();
 	}
 	 
